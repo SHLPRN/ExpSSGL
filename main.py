@@ -7,3 +7,4 @@ if __name__ == '__main__':
     model = input('Please enter the model you want to run:')
     conf = ModelConf('./conf/' + model + '.conf')
     rec = SELFRec(conf)
+    rec.execute()
