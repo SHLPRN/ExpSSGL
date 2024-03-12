@@ -17,6 +17,7 @@ class SimGCL(GraphRecommender):
         args = OptionConf(self.config['SimGCL'])
         self.cl_rate = float(args['-lambda'])
         self.eps = float(args['-eps'])
+        self.temp = float(args['-tau'])
         self.n_layers = int(args['-n_layer'])
         self.model = SimGCL_Encoder(self.data, self.emb_size, self.eps, self.n_layers)
 
@@ -48,8 +49,8 @@ class SimGCL(GraphRecommender):
         i_idx = torch.unique(torch.Tensor(idx[1]).type(torch.long)).cuda()
         user_view_1, item_view_1 = self.model(perturbed=True)
         user_view_2, item_view_2 = self.model(perturbed=True)
-        user_cl_loss = InfoNCE(user_view_1[u_idx], user_view_2[u_idx], 0.2)
-        item_cl_loss = InfoNCE(item_view_1[i_idx], item_view_2[i_idx], 0.2)
+        user_cl_loss = InfoNCE(user_view_1[u_idx], user_view_2[u_idx], self.temp)
+        item_cl_loss = InfoNCE(item_view_1[i_idx], item_view_2[i_idx], self.temp)
         return user_cl_loss + item_cl_loss
 
     def save(self):

@@ -4,7 +4,7 @@ import time
 
 
 if __name__ == '__main__':
-    model = 'LightGCN'
+    model = 'ExpSSGL'
     print(model)
     s = time.time()
     conf = ModelConf('./conf/' + model + '.conf')
