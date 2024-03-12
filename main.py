@@ -1,10 +1,14 @@
 from SELFRec import SELFRec
 from util.conf import ModelConf
+import time
 
 
 if __name__ == '__main__':
-    print('ExpSSGL')
-    model = input('Please enter the model you want to run:')
+    model = 'LightGCN'
+    print(model)
+    s = time.time()
     conf = ModelConf('./conf/' + model + '.conf')
     rec = SELFRec(conf)
     rec.execute()
+    e = time.time()
+    print("Running time: %f s" % (e - s))

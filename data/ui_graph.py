@@ -22,16 +22,16 @@ class Interaction(Data, Graph):
         self.__generate_set()
         self.user_num = len(self.training_set_u)
         self.item_num = len(self.training_set_i)
-        self.ui_adj = self.__create_sparse_bipartite_adjacency()    # (u+i, u+i)
-        self.norm_adj = self.normalize_graph_mat(self.ui_adj)       # (u+i, u+i)
+        self.ui_adj = self.__create_sparse_bipartite_adjacency()            # (u+i, u+i)
+        self.norm_adj = self.normalize_graph_mat(self.ui_adj)               # (u+i, u+i)
         self.interaction_mat = self.__create_sparse_interaction_matrix()    # (u, i)
 
     def __generate_set(self):
         for entry in self.training_data:
             user, item, rating = entry
             if user not in self.user:
-                self.user[user] = len(self.user)  # user2id
-                self.id2user[self.user[user]] = user  # id2user
+                self.user[user] = len(self.user)        # user2id
+                self.id2user[self.user[user]] = user    # id2user
             if item not in self.item:
                 self.item[item] = len(self.item)
                 self.id2item[self.item[item]] = item
