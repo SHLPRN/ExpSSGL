@@ -23,13 +23,7 @@ class ExpSSGL(GraphRecommender):
         self.eps = float(args['-eps'])
         self.temp = float(args['-tau'])
         self.n_layers = int(args['-n_layer'])
-        u_cnt = self.data.interaction_mat.get_shape()[0]
-        i_cnt = self.data.interaction_mat.get_shape()[1]
-        val = np.ones(u_cnt, dtype=np.float32)
-        row_idx = np.zeros(u_cnt, dtype=np.float32)
-        low_degree_i = (sp.csr_matrix((val, (row_idx, np.arange(u_cnt))), shape=(1, u_cnt)) *
-                             self.data.interaction_mat).toarray().reshape(i_cnt)
-        self.low_degree_i = np.argsort(low_degree_i)[math.floor(i_cnt * self.keep_rate):]
+        self.keep_edge_u_np, self.keep_edge_i_np, self.residue_edge = self.low_degree_node_keep()
         self.model = ExpSSGL_Encoder(self.data, self.emb_size, self.n_layers, self.eps)
 
     def train(self):
@@ -59,8 +53,35 @@ class ExpSSGL(GraphRecommender):
             self.fast_evaluation(epoch)
         self.user_emb, self.item_emb = self.best_user_emb, self.best_item_emb
 
+    def low_degree_node_keep(self):
+        u_cnt = self.data.interaction_mat.get_shape()[0]
+        i_cnt = self.data.interaction_mat.get_shape()[1]
+        val = np.ones(u_cnt, dtype=np.float32)
+        row_idx = np.zeros(u_cnt, dtype=np.float32)
+        i_degree = (sp.csr_matrix((val, (row_idx, np.arange(u_cnt))), shape=(1, u_cnt)) *
+                    self.data.interaction_mat).toarray().reshape(i_cnt)
+        low_degree_i = np.argsort(i_degree)[:math.floor(i_cnt * self.keep_rate)]
+        val = np.ones(i_cnt, dtype=np.float32)
+        col_idx = np.zeros(i_cnt, dtype=np.float32)
+        u_degree = (self.data.interaction_mat * sp.csr_matrix((val, (np.arange(i_cnt), col_idx)),
+                                                              shape=(i_cnt, 1))).toarray().reshape(u_cnt)
+        low_degree_u = np.argsort(u_degree)[:math.floor(u_cnt * self.keep_rate)]
+        keep_edge_u_np = []
+        keep_edge_i_np = []
+        residue_edge = np.arange(self.data.interaction_mat.count_nonzero())
+        row_idx, col_idx = self.data.interaction_mat.nonzero()
+        for i in range(row_idx.size):
+            mid_row_idx = row_idx[i]
+            mid_col_idx = col_idx[i]
+            if mid_row_idx in low_degree_u or mid_col_idx in low_degree_i:
+                keep_edge_u_np.append(mid_row_idx)
+                keep_edge_i_np.append(mid_col_idx)
+                np.delete(residue_edge, i)
+        return keep_edge_u_np, keep_edge_i_np, residue_edge
+
     def graph_edge_dropout(self):
-        dropped_mat = GraphAugmentor.edge_dropout(self.data.interaction_mat, self.drop_rate)
+        dropped_mat = GraphAugmentor.exp_edge_dropout(self.data.interaction_mat, self.drop_rate,
+                                                      self.keep_edge_u_np, self.keep_edge_i_np, self.residue_edge)
         dropped_mat = self.data.convert_to_laplacian_mat(dropped_mat)
         return TorchGraphInterface.convert_sparse_mat_to_tensor(dropped_mat).cuda()
 

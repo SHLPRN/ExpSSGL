@@ -39,3 +39,16 @@ class GraphAugmentor(object):
         edges = np.ones_like(user_np, dtype=np.float32)
         dropped_adj = sp.csr_matrix((edges, (user_np, item_np)), shape=adj_shape)
         return dropped_adj
+
+    @staticmethod
+    def exp_edge_dropout(sp_adj, drop_rate, keep_edge_u_np, keep_edge_i_np, residue_edge):
+        """Input: a sparse user-item adjacency matrix and a dropout rate."""
+        adj_shape = sp_adj.get_shape()
+        edge_count = sp_adj.count_nonzero()
+        row_idx, col_idx = sp_adj.nonzero()
+        keep_idx = random.sample(residue_edge, int(edge_count * (1 - drop_rate) - len(residue_edge)))
+        user_np = (np.array(row_idx)[keep_idx]).append(keep_edge_u_np)
+        item_np = (np.array(col_idx)[keep_idx]).append(keep_edge_i_np)
+        edges = np.ones_like(user_np, dtype=np.float32)
+        dropped_adj = sp.csr_matrix((edges, (user_np, item_np)), shape=adj_shape)
+        return dropped_adj
