@@ -16,10 +16,10 @@ class SGL(GraphRecommender):
     def __init__(self, conf, training_set, test_set):
         super(SGL, self).__init__(conf, training_set, test_set)
         args = OptionConf(self.config['SGL'])
-        self.cl_rate = float(args['-lambda'])
+        self.n_layers = int(args['-n_layer'])
         self.aug_type = self.aug_type = int(args['-augtype'])
         self.drop_rate = float(args['-droprate'])
-        self.n_layers = int(args['-n_layer'])
+        self.cl_rate = float(args['-lambda'])
         self.temp = float(args['-tau'])
         self.model = SGL_Encoder(self.data, self.emb_size, self.n_layers)
 

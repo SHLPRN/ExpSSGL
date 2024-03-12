@@ -8,7 +8,7 @@ class ModelConf(object):
 
     def __getitem__(self, item):
         if not self.contain(item):
-            print('parameter '+item+' is not found in the configuration file!')
+            print('parameter ' + item + ' is not found in the configuration file!')
             exit(-1)
         return self.config[item]
 
@@ -40,7 +40,7 @@ class OptionConf(object):
             self.mainOption = False
         for i, item in enumerate(self.line):
             if (item.startswith('-') or item.startswith('--')) and not item[1:].isdigit():
-                ind = i+1
+                ind = i + 1
                 for j, sub in enumerate(self.line[ind:]):
                     if (sub.startswith('-') or sub.startswith('--')) and not sub[1:].isdigit():
                         ind = j
@@ -49,13 +49,13 @@ class OptionConf(object):
                         ind = j + 1
                         break
                 try:
-                    self.options[item] = ' '.join(self.line[i+1:i+1+ind])
+                    self.options[item] = ' '.join(self.line[i + 1:i + 1 + ind])
                 except IndexError:
                     self.options[item] = 1
 
     def __getitem__(self, item):
         if not self.contain(item):
-            print('parameter '+item+' is invalid!')
+            print('parameter ' + item + ' is invalid!')
             exit(-1)
         return self.options[item]
 

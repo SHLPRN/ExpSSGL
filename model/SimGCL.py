@@ -15,10 +15,10 @@ class SimGCL(GraphRecommender):
     def __init__(self, conf, training_set, test_set):
         super(SimGCL, self).__init__(conf, training_set, test_set)
         args = OptionConf(self.config['SimGCL'])
-        self.cl_rate = float(args['-lambda'])
-        self.eps = float(args['-eps'])
-        self.temp = float(args['-tau'])
         self.n_layers = int(args['-n_layer'])
+        self.eps = float(args['-eps'])
+        self.cl_rate = float(args['-lambda'])
+        self.temp = float(args['-tau'])
         self.model = SimGCL_Encoder(self.data, self.emb_size, self.eps, self.n_layers)
 
     def train(self):
@@ -67,9 +67,9 @@ class SimGCL_Encoder(nn.Module):
     def __init__(self, data, emb_size, eps, n_layers):
         super(SimGCL_Encoder, self).__init__()
         self.data = data
-        self.eps = eps
         self.emb_size = emb_size
         self.n_layers = n_layers
+        self.eps = eps
         self.norm_adj = data.norm_adj
         self.embedding_dict = self._init_model()
         self.sparse_norm_adj = TorchGraphInterface.convert_sparse_mat_to_tensor(self.norm_adj).cuda()
@@ -93,5 +93,6 @@ class SimGCL_Encoder(nn.Module):
             all_embeddings.append(ego_embeddings)
         all_embeddings = torch.stack(all_embeddings, dim=1)
         all_embeddings = torch.mean(all_embeddings, dim=1)
-        user_all_embeddings, item_all_embeddings = torch.split(all_embeddings, [self.data.user_num, self.data.item_num])
+        user_all_embeddings, item_all_embeddings = (
+            torch.split(all_embeddings, [self.data.user_num, self.data.item_num]))
         return user_all_embeddings, item_all_embeddings

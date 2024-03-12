@@ -1,8 +1,12 @@
 from base.graph_recommender import GraphRecommender
 from base.torch_interface import TorchGraphInterface
+from data.augmentor import GraphAugmentor
 from util.conf import OptionConf
 from util.loss_torch import bpr_loss, l2_reg_loss, InfoNCE
 from util.sampler import next_batch_pairwise
+import math
+import numpy as np
+import scipy.sparse as sp
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -15,9 +19,17 @@ class ExpSSGL(GraphRecommender):
         self.cl_rate1 = float(args['-lambda1'])
         self.cl_rate2 = float(args['-lambda2'])
         self.drop_rate = float(args['-droprate'])
+        self.keep_rate = float(args['-keeprate'])
         self.eps = float(args['-eps'])
         self.temp = float(args['-tau'])
         self.n_layers = int(args['-n_layer'])
+        u_cnt = self.data.interaction_mat.get_shape()[0]
+        i_cnt = self.data.interaction_mat.get_shape()[1]
+        val = np.ones(u_cnt, dtype=np.float32)
+        row_idx = np.zeros(u_cnt, dtype=np.float32)
+        low_degree_i = (sp.csr_matrix((val, (row_idx, np.arange(u_cnt))), shape=(1, u_cnt)) *
+                             self.data.interaction_mat).toarray().reshape(i_cnt)
+        self.low_degree_i = np.argsort(low_degree_i)[math.floor(i_cnt * self.keep_rate):]
         self.model = ExpSSGL_Encoder(self.data, self.emb_size, self.n_layers, self.eps)
 
     def train(self):
@@ -34,6 +46,7 @@ class ExpSSGL(GraphRecommender):
                 cl_loss = (self.cl_rate1 * self.cal_cl_loss1([user_idx, pos_idx]) +
                            self.cl_rate2 * self.cal_cl_loss2([user_idx, pos_idx], rec_user_emb, rec_item_emb,
                                                              dropped_adj))
+                # cl_loss = self.cl_rate1 * self.cal_cl_loss1([user_idx, pos_idx])
                 batch_loss = rec_loss + l2_reg_loss(self.reg, user_emb, pos_item_emb) + cl_loss
                 # Backward and optimize
                 optimizer.zero_grad()
@@ -97,11 +110,11 @@ class ExpSSGL_Encoder(nn.Module):
         })
         return embedding_dict
 
-    def forward(self, dropout=False, perturbed=False):
+    def forward(self, perturbed_adj=None, perturbed=False):
         ego_embeddings = torch.cat([self.embedding_dict['user_emb'], self.embedding_dict['item_emb']], 0)
         all_embeddings = []
         for k in range(self.n_layers):
-            if dropout:
+            if perturbed_adj is not None:
                 ego_embeddings = torch.sparse.mm(perturbed_adj, ego_embeddings)
             else:
                 ego_embeddings = torch.sparse.mm(self.sparse_norm_adj, ego_embeddings)
@@ -111,5 +124,6 @@ class ExpSSGL_Encoder(nn.Module):
             all_embeddings.append(ego_embeddings)
         all_embeddings = torch.stack(all_embeddings, dim=1)
         all_embeddings = torch.mean(all_embeddings, dim=1)
-        user_all_embeddings, item_all_embeddings = torch.split(all_embeddings, [self.data.user_num, self.data.item_num])
+        user_all_embeddings, item_all_embeddings = (
+            torch.split(all_embeddings, [self.data.user_num, self.data.item_num]))
         return user_all_embeddings, item_all_embeddings
