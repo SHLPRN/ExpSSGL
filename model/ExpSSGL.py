@@ -45,6 +45,8 @@ class ExpSSGL(GraphRecommender):
                 cl_loss = (self.cl_rate1 * self.cal_cl_loss1([user_idx, pos_idx]) +
                            self.cl_rate2 * self.cal_cl_loss2([user_idx, pos_idx], rec_user_emb, rec_item_emb,
                                                              dropped_adj))
+                cl_loss = (self.cl_rate1 * self.cal_cl_loss1([user_idx, pos_idx]) +
+                           self.cl_rate2 * self.cal_cl_loss2([user_idx, pos_idx], dropped_adj))
                 """
                 batch_loss = rec_loss + l2_reg_loss(self.reg, user_emb, pos_item_emb) + cl_loss
                 # Backward and optimize
@@ -115,6 +117,17 @@ class ExpSSGL(GraphRecommender):
         view1 = torch.cat((user_view_1[u_idx], item_view_1[i_idx]), 0)
         view2 = torch.cat((user_view_2[u_idx], item_view_2[i_idx]), 0)
         return InfoNCE(view1, view2, self.temp)
+
+    """
+    def cal_cl_loss2(self, idx, perturbed_mat):
+        u_idx = torch.unique(torch.Tensor(idx[0]).type(torch.long)).cuda()
+        i_idx = torch.unique(torch.Tensor(idx[1]).type(torch.long)).cuda()
+        user_view_1, item_view_1 = self.model(perturbed_adj=perturbed_mat)
+        user_view_2, item_view_2 = self.model(perturbed_adj=perturbed_mat)
+        view1 = torch.cat((user_view_1[u_idx], item_view_1[i_idx]), 0)
+        view2 = torch.cat((user_view_2[u_idx], item_view_2[i_idx]), 0)
+        return InfoNCE(view1, view2, self.temp)
+    """
 
     def save(self):
         with torch.no_grad():
