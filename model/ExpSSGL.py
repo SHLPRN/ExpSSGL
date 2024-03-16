@@ -28,7 +28,7 @@ class ExpSSGL(GraphRecommender):
         self.n_layers = int(args['-n_layer'])
         # residue_edge: edges to be dropout
         # keep_edge: edges kept by keep_rate
-        self.keep_edge_u_idx, self.keep_edge_i_idx, self.residue_edge = self.low_degree_node_keep()
+        self.keep_edge_u_idx, self.keep_edge_i_idx, self.residue_edge = self.low_degree_node_keeper()
         self.model = ExpSSGL_Encoder(self.data, self.emb_size, self.n_layers, self.eps)
 
     def train(self):
@@ -66,7 +66,7 @@ class ExpSSGL(GraphRecommender):
             self.fast_evaluation(epoch)
         self.user_emb, self.item_emb = self.best_user_emb, self.best_item_emb
 
-    def low_degree_node_keep(self):
+    def low_degree_node_keeper(self):
         u_cnt = self.data.interaction_mat.get_shape()[0]
         i_cnt = self.data.interaction_mat.get_shape()[1]
         val = np.ones(u_cnt, dtype=np.float32)
