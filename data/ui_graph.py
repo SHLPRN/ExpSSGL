@@ -8,23 +8,24 @@ from collections import defaultdict
 
 class Interaction(Data, Graph):
     def __init__(self, conf, training, test):
+        # training/test: list of data list, element: [u, i, e]
         Graph.__init__(self)
         Data.__init__(self, conf, training, test)
 
-        self.user = {}
-        self.item = {}
-        self.id2user = {}
-        self.id2item = {}
-        self.training_set_u = defaultdict(dict)
-        self.training_set_i = defaultdict(dict)
-        self.test_set = defaultdict(dict)
-        self.test_set_item = set()
+        self.user = {}      # user2id dict
+        self.item = {}      # item2id dict
+        self.id2user = {}   # id2user dict
+        self.id2item = {}   # id2item dict
+        self.training_set_u = defaultdict(dict) # dict(key: user, val: dict(key: neighbors of user, val: edge rating))
+        self.training_set_i = defaultdict(dict) # dict(key: item, val: dict(key: neighbors of item, val: edge rating))
+        self.test_set = defaultdict(dict)       # dict(key: user, val: dict(key: neighbors of user, val: edge rating))
+        self.test_set_item = set()              # set, element: items in test dataset
         self.__generate_set()
         self.user_num = len(self.training_set_u)
         self.item_num = len(self.training_set_i)
-        self.ui_adj = self.__create_sparse_bipartite_adjacency()            # (u+i, u+i)
-        self.norm_adj = self.normalize_graph_mat(self.ui_adj)               # (u+i, u+i)
-        self.interaction_mat = self.__create_sparse_interaction_matrix()    # (u, i)
+        self.ui_adj = self.__create_sparse_bipartite_adjacency()            # csr_matrix, (u+i, u+i), idx=id, not user/item
+        self.norm_adj = self.normalize_graph_mat(self.ui_adj)               # csr_matrix, (u+i, u+i), idx=id, not user/item
+        self.interaction_mat = self.__create_sparse_interaction_matrix()    # csr_matrix, (u, i), idx=id, not user/item
 
     def __generate_set(self):
         for entry in self.training_data:

@@ -16,11 +16,11 @@ class ExpSSGL(GraphRecommender):
     def __init__(self, conf, training_set, test_set):
         super(ExpSSGL, self).__init__(conf, training_set, test_set)
         args = OptionConf(self.config['ExpSSGL'])
+        """
         self.cl_rate = float(args['-lambda'])
         """
         self.cl_rate1 = float(args['-lambda1'])
         self.cl_rate2 = float(args['-lambda2'])
-        """
         self.drop_rate = float(args['-droprate'])
         self.keep_rate = float(args['-keeprate'])
         self.eps = float(args['-eps'])
@@ -35,9 +35,10 @@ class ExpSSGL(GraphRecommender):
         model = self.model.cuda()
         optimizer = torch.optim.Adam(model.parameters(), lr=self.lRate)
         for epoch in range(self.maxEpoch):
-            dropped_adj = self.graph_edge_dropout()
+            dropped_adj, dropped_interaction_mat = self.graph_edge_dropout()
             # for n, batch in enumerate(next_batch_pairwise(self.data, self.batch_size)):
-            for n, batch in enumerate(exp_next_batch_pairwise(self.data, self.batch_size, dropped_adj)):
+            for n, batch in enumerate(exp_next_batch_pairwise(self.data, self.batch_size, dropped_interaction_mat)):
+                # user_idx, pos_idx, neg_idx = batch
                 user_idx, pos_idx, neg_idx, drop_user_idx, drop_pos_idx, drop_neg_idx = batch
                 rec_user_emb, rec_item_emb = model()
                 user_emb, pos_item_emb, neg_item_emb = (rec_user_emb[user_idx], rec_item_emb[pos_idx],
@@ -52,8 +53,7 @@ class ExpSSGL(GraphRecommender):
                            self.cl_rate2 * self.cal_cl_loss2([user_idx, pos_idx]))
                 """
                 cl_loss = (self.cl_rate1 * self.cal_cl_loss1([user_idx, pos_idx]) +
-                           self.cl_rate2 * self.cal_cl_loss2([user_idx, pos_idx], dropped_adj, drop_user_idx,
-                                                             drop_pos_idx, drop_neg_idx))
+                           self.cl_rate2 * self.cal_cl_loss2(dropped_adj, drop_user_idx, drop_pos_idx, drop_neg_idx))
                 batch_loss = rec_loss + l2_reg_loss(self.reg, user_emb, pos_item_emb) + cl_loss
                 # Backward and optimize
                 optimizer.zero_grad()
@@ -95,8 +95,9 @@ class ExpSSGL(GraphRecommender):
     def graph_edge_dropout(self):
         dropped_mat = GraphAugmentor.exp_edge_dropout(self.data.interaction_mat, self.drop_rate,
                                                       self.keep_edge_u_idx, self.keep_edge_i_idx, self.residue_edge)
+        dropped_interaction_mat = TorchGraphInterface.convert_sparse_mat_to_tensor(dropped_mat).cuda()
         dropped_mat = self.data.convert_to_laplacian_mat(dropped_mat)
-        return TorchGraphInterface.convert_sparse_mat_to_tensor(dropped_mat).cuda()
+        return TorchGraphInterface.convert_sparse_mat_to_tensor(dropped_mat).cuda(), dropped_interaction_mat
 
     def cal_cl_loss(self, idx, perturbed_mat):
         u_idx = torch.unique(torch.Tensor(idx[0]).type(torch.long)).cuda()
@@ -137,7 +138,7 @@ class ExpSSGL(GraphRecommender):
         return InfoNCE(view1, view2, self.temp)
     """
 
-    def cal_cl_loss2(self, idx, perturbed_mat, drop_user_idx, drop_pos_idx, drop_neg_idx):
+    def cal_cl_loss2(self, perturbed_mat, drop_user_idx, drop_pos_idx, drop_neg_idx):
         perturbed_user_emb, perturbed_item_emb = self.model(perturbed_adj=perturbed_mat)
         user_emb, pos_item_emb, neg_item_emb = (perturbed_user_emb[drop_user_idx], perturbed_item_emb[drop_pos_idx],
                                                 perturbed_item_emb[drop_neg_idx])

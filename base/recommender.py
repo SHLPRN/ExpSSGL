@@ -8,6 +8,7 @@ from time import strftime, localtime, time
 class Recommender(object):
     def __init__(self, conf, training_set, test_set, **kwargs):
         self.config = conf
+        # training_set/test_set: list of data list, element: [u, i, e]
         self.data = Data(self.config, training_set, test_set)
         self.model_name = self.config['model.name']
         self.ranking = OptionConf(self.config['item.ranking'])
