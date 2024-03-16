@@ -46,10 +46,10 @@ class GraphAugmentor(object):
         adj_shape = sp_adj.get_shape()
         edge_count = sp_adj.count_nonzero()
         row_idx, col_idx = sp_adj.nonzero()
-        keep_idx = random.sample(residue_edge.tolist(), int(edge_count * (1 - drop_rate)) -
-                                                            (int(edge_count) - len(residue_edge)))
-        user_np = np.append(np.array(row_idx)[keep_idx], keep_edge_u_np)
-        item_np = np.append(np.array(col_idx)[keep_idx], keep_edge_i_np)
+        residue_keep_idx = random.sample(residue_edge.tolist(), int(edge_count * (1 - drop_rate)) -
+                                         (int(edge_count) - len(residue_edge)))
+        user_np = np.append(np.array(row_idx)[residue_keep_idx], keep_edge_u_np)
+        item_np = np.append(np.array(col_idx)[residue_keep_idx], keep_edge_i_np)
         edges = np.ones_like(user_np, dtype=np.float32)
         dropped_adj = sp.csr_matrix((edges, (user_np, item_np)), shape=adj_shape)
         return dropped_adj
