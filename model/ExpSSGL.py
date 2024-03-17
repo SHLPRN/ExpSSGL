@@ -35,7 +35,7 @@ class ExpSSGL(GraphRecommender):
         model = self.model.cuda()
         optimizer = torch.optim.Adam(model.parameters(), lr=self.lRate)
         for epoch in range(self.maxEpoch):
-            dropped_adj, dropped_interaction_mat = self.graph_edge_dropout()
+            # dropped_adj, dropped_interaction_mat = self.graph_edge_dropout(True)
             for n, batch in enumerate(next_batch_pairwise(self.data, self.batch_size)):
                 """
             for n, batch in enumerate(exp_next_batch_pairwise(self.data, self.batch_size, dropped_interaction_mat)):
@@ -96,12 +96,17 @@ class ExpSSGL(GraphRecommender):
                 np.delete(residue_edge, i)
         return keep_edge_u_idx, keep_edge_i_idx, residue_edge
 
-    def graph_edge_dropout(self):
+    def graph_edge_dropout(self, need=False):
         dropped_mat = GraphAugmentor.exp_edge_dropout(self.data.interaction_mat, self.drop_rate,
                                                       self.keep_edge_u_idx, self.keep_edge_i_idx, self.residue_edge)
-        dropped_interaction_mat = TorchGraphInterface.convert_sparse_mat_to_tensor(dropped_mat).cuda()
+        dropped_interaction_mat = None
+        if need:
+            dropped_interaction_mat = TorchGraphInterface.convert_sparse_mat_to_tensor(dropped_mat).cuda()
         dropped_mat = self.data.convert_to_laplacian_mat(dropped_mat)
-        return TorchGraphInterface.convert_sparse_mat_to_tensor(dropped_mat).cuda(), dropped_interaction_mat
+        if need:
+            return TorchGraphInterface.convert_sparse_mat_to_tensor(dropped_mat).cuda(), dropped_interaction_mat
+        else:
+            return TorchGraphInterface.convert_sparse_mat_to_tensor(dropped_mat).cuda()
 
     def cal_cl_loss(self, idx, perturbed_mat):
         u_idx = torch.unique(torch.Tensor(idx[0]).type(torch.long)).cuda()
