@@ -124,9 +124,10 @@ class ExpSSGL(GraphRecommender):
         u_idx = torch.unique(torch.Tensor(idx[0]).type(torch.long)).cuda()
         i_idx = torch.unique(torch.Tensor(idx[1]).type(torch.long)).cuda()
         user_view_2, item_view_2 = self.model(perturbed_adj=perturbed_mat)
-        view1 = torch.cat((user_view_1[u_idx], item_view_1[i_idx]), 0)
-        view2 = torch.cat((user_view_2[u_idx], item_view_2[i_idx]), 0)
-        return InfoNCE(view1, view2, self.temp)
+        user_cl_loss = InfoNCE(user_view_1[u_idx], user_view_2[u_idx], self.temp)
+        item_cl_loss = InfoNCE(item_view_1[i_idx], item_view_2[i_idx], self.temp)
+        return user_cl_loss + item_cl_loss
+    """
 
     def cal_cl_loss2(self, idx):
         perturbed_mat1 = self.graph_edge_dropout()
@@ -135,16 +136,17 @@ class ExpSSGL(GraphRecommender):
         i_idx = torch.unique(torch.Tensor(idx[1]).type(torch.long)).cuda()
         user_view_1, item_view_1 = self.model(perturbed_adj=perturbed_mat1)
         user_view_2, item_view_2 = self.model(perturbed_adj=perturbed_mat2)
-        view1 = torch.cat((user_view_1[u_idx], item_view_1[i_idx]), 0)
-        view2 = torch.cat((user_view_2[u_idx], item_view_2[i_idx]), 0)
-        return InfoNCE(view1, view2, self.temp)
-    """
+        user_cl_loss = InfoNCE(user_view_1[u_idx], user_view_2[u_idx], self.temp)
+        item_cl_loss = InfoNCE(item_view_1[i_idx], item_view_2[i_idx], self.temp)
+        return user_cl_loss + item_cl_loss
 
+    """
     def cal_cl_loss2(self, perturbed_mat, drop_user_idx, drop_pos_idx, drop_neg_idx):
         perturbed_user_emb, perturbed_item_emb = self.model(perturbed_adj=perturbed_mat)
         user_emb, pos_item_emb, neg_item_emb = (perturbed_user_emb[drop_user_idx], perturbed_item_emb[drop_pos_idx],
                                                 perturbed_item_emb[drop_neg_idx])
         return bpr_loss(user_emb, pos_item_emb, neg_item_emb)
+    """
 
     def save(self):
         with torch.no_grad():
