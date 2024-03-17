@@ -36,13 +36,11 @@ class ExpSSGL(GraphRecommender):
         optimizer = torch.optim.Adam(model.parameters(), lr=self.lRate)
         for epoch in range(self.maxEpoch):
             # dropped_adj = self.graph_edge_dropout()
-            # dropped_adj, dropped_interaction_mat = self.graph_edge_dropout(True)
-            for n, batch in enumerate(next_batch_pairwise(self.data, self.batch_size)):
-                """
+            dropped_adj, dropped_interaction_mat = self.graph_edge_dropout(need=True)
+            # for n, batch in enumerate(next_batch_pairwise(self.data, self.batch_size)):
             for n, batch in enumerate(exp_next_batch_pairwise(self.data, self.batch_size, dropped_interaction_mat)):
-                """
-                user_idx, pos_idx, neg_idx = batch
-                # user_idx, pos_idx, neg_idx, drop_user_idx, drop_pos_idx, drop_neg_idx = batch
+                # user_idx, pos_idx, neg_idx = batch
+                user_idx, pos_idx, neg_idx, drop_user_idx, drop_pos_idx, drop_neg_idx = batch
                 rec_user_emb, rec_item_emb = model()
                 user_emb, pos_item_emb, neg_item_emb = (rec_user_emb[user_idx], rec_item_emb[pos_idx],
                                                         rec_item_emb[neg_idx])
@@ -52,13 +50,11 @@ class ExpSSGL(GraphRecommender):
                 cl_loss = (self.cl_rate1 * self.cal_cl_loss1([user_idx, pos_idx]) +
                            self.cl_rate2 * self.cal_cl_loss2([user_idx, pos_idx], rec_user_emb, rec_item_emb,
                                                              dropped_adj))
-                """
                 cl_loss = (self.cl_rate1 * self.cal_cl_loss1([user_idx, pos_idx]) +
                            self.cl_rate2 * self.cal_cl_loss2([user_idx, pos_idx]))
                 """
                 cl_loss = (self.cl_rate1 * self.cal_cl_loss1([user_idx, pos_idx]) +
-                           self.cl_rate2 * self.cal_cl_loss2(dropped_adj, drop_user_idx, drop_pos_idx, drop_neg_idx))
-                """
+                           self.cl_rate2 * self.cal_gl_loss(dropped_adj, drop_user_idx, drop_pos_idx, drop_neg_idx))
                 batch_loss = rec_loss + l2_reg_loss(self.reg, user_emb, pos_item_emb) + cl_loss
                 # Backward and optimize
                 optimizer.zero_grad()
@@ -135,7 +131,6 @@ class ExpSSGL(GraphRecommender):
         user_cl_loss = InfoNCE(user_view_1[u_idx], user_view_2[u_idx], self.temp)
         item_cl_loss = InfoNCE(item_view_1[i_idx], item_view_2[i_idx], self.temp)
         return user_cl_loss + item_cl_loss
-    """
 
     def cal_cl_loss2(self, idx):
         perturbed_mat1 = self.graph_edge_dropout()
@@ -147,14 +142,13 @@ class ExpSSGL(GraphRecommender):
         user_cl_loss = InfoNCE(user_view_1[u_idx], user_view_2[u_idx], self.temp)
         item_cl_loss = InfoNCE(item_view_1[i_idx], item_view_2[i_idx], self.temp)
         return user_cl_loss + item_cl_loss
-
     """
-    def cal_cl_loss2(self, perturbed_mat, drop_user_idx, drop_pos_idx, drop_neg_idx):
+
+    def cal_gl_loss(self, perturbed_mat, drop_user_idx, drop_pos_idx, drop_neg_idx):
         perturbed_user_emb, perturbed_item_emb = self.model(perturbed_adj=perturbed_mat)
         user_emb, pos_item_emb, neg_item_emb = (perturbed_user_emb[drop_user_idx], perturbed_item_emb[drop_pos_idx],
                                                 perturbed_item_emb[drop_neg_idx])
         return bpr_loss(user_emb, pos_item_emb, neg_item_emb)
-    """
 
     def save(self):
         with torch.no_grad():
