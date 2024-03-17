@@ -35,6 +35,7 @@ class ExpSSGL(GraphRecommender):
         model = self.model.cuda()
         optimizer = torch.optim.Adam(model.parameters(), lr=self.lRate)
         for epoch in range(self.maxEpoch):
+            # dropped_adj = self.graph_edge_dropout()
             # dropped_adj, dropped_interaction_mat = self.graph_edge_dropout(True)
             for n, batch in enumerate(next_batch_pairwise(self.data, self.batch_size)):
                 """
