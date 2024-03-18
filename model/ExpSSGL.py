@@ -76,10 +76,10 @@ class ExpSSGL(GraphRecommender):
                 ssl_loss = cl_loss + gl_loss
                 """
                 # structure A/B/C
-                batch_loss = rec_loss + l2_reg_loss(self.reg, user_emb, pos_item_emb) + cl_loss
+                batch_loss = rec_loss + cl_loss + l2_reg_loss(self.reg, user_emb, pos_item_emb)
                 """
                 # structure D
-                batch_loss = rec_loss + l2_reg_loss(self.reg, user_emb, pos_item_emb) + ssl_loss
+                batch_loss = rec_loss + ssl_loss + l2_reg_loss(self.reg, user_emb, pos_item_emb)
                 """
                 # Backward and optimize
                 optimizer.zero_grad()
