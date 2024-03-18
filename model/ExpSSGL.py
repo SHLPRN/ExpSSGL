@@ -91,8 +91,7 @@ class ExpSSGL(GraphRecommender):
                     print('training:', epoch + 1, 'batch', n, 'rec_loss:', rec_loss.item(), 'cl_loss:', cl_loss.item())
                     """
                     # structure D
-                    print('training:', epoch + 1, 'batch', n, 'rec_loss:', rec_loss.item(), 'ssl_loss:', ssl_loss.item(),
-                          'cl_loss:', cl_loss.item(), 'gl_loss:', gl_loss.item())
+                    print('training:', epoch + 1, 'batch', n, 'rec_loss:', rec_loss.item(), 'ssl_loss:', ssl_loss.item())
             with torch.no_grad():
                 self.user_emb, self.item_emb = self.model()
             self.fast_evaluation(epoch)
