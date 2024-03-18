@@ -16,16 +16,16 @@ class ExpSSGL(GraphRecommender):
     def __init__(self, conf, training_set, test_set):
         super(ExpSSGL, self).__init__(conf, training_set, test_set)
         args = OptionConf(self.config['ExpSSGL'])
+        """
         # structure A/C
         self.cl_rate1 = float(args['-lambda1'])
         self.cl_rate2 = float(args['-lambda2'])
-        """
         # structure B
         self.cl_rate = float(args['-lambda'])
+        """
         # structure D
         self.cl_rate = float(args['-lambda1'])
         self.gl_rate = float(args['-lambda2'])
-        """
         self.drop_rate = float(args['-droprate'])
         self.keep_rate = float(args['-keeprate'])
         self.eps = float(args['-eps'])
@@ -40,6 +40,7 @@ class ExpSSGL(GraphRecommender):
         model = self.model.cuda()
         optimizer = torch.optim.Adam(model.parameters(), lr=self.lRate)
         for epoch in range(self.maxEpoch):
+            """
             # structure A/B/C
             dropped_adj = self.graph_edge_dropout()
             """
@@ -47,29 +48,29 @@ class ExpSSGL(GraphRecommender):
             dropped_adj, dropped_interaction_mat = self.graph_edge_dropout(need=True)
             """
             for n, batch in enumerate(next_batch_pairwise(self.data, self.batch_size)):
-                """
-                for n, batch in enumerate(exp_next_batch_pairwise(self.data, self.batch_size, dropped_interaction_mat)):
+            """
+            for n, batch in enumerate(exp_next_batch_pairwise(self.data, self.batch_size, dropped_interaction_mat)):
                 """
                 # structure A/B/C
                 user_idx, pos_idx, neg_idx = batch
                 """
                 # structure D
                 user_idx, pos_idx, neg_idx, drop_user_idx, drop_pos_idx, drop_neg_idx = batch
-                """
                 rec_user_emb, rec_item_emb = model()
                 user_emb, pos_item_emb, neg_item_emb = (rec_user_emb[user_idx], rec_item_emb[pos_idx],
                                                         rec_item_emb[neg_idx])
                 rec_loss = bpr_loss(user_emb, pos_item_emb, neg_item_emb)
+                """
                 # structure A
                 cl_loss = (self.cl_rate1 * self.cal_cl_loss1([user_idx, pos_idx]) +
                            self.cl_rate2 * self.cal_cl_loss2([user_idx, pos_idx], rec_user_emb, rec_item_emb,
                                                              dropped_adj))
-                """
                 # structure B
                 cl_loss = self.cl_rate * self.cal_cl_loss([user_idx, pos_idx], dropped_adj)
                 # structure C
                 cl_loss = (self.cl_rate1 * self.cal_cl_loss1([user_idx, pos_idx]) +
                            self.cl_rate2 * self.cal_cl_loss2([user_idx, pos_idx]))
+                """
                 # structure D
                 cl_loss = self.cl_rate * self.cal_cl_loss1([user_idx, pos_idx])
                 gl_loss = self.gl_rate * self.cal_gl_loss(dropped_adj, drop_user_idx, drop_pos_idx, drop_neg_idx)
@@ -80,19 +81,18 @@ class ExpSSGL(GraphRecommender):
                 """
                 # structure D
                 batch_loss = rec_loss + ssl_loss + l2_reg_loss(self.reg, user_emb, pos_item_emb)
-                """
                 # Backward and optimize
                 optimizer.zero_grad()
                 batch_loss.backward()
                 optimizer.step()
                 if n % 100 == 0 and n > 0:
+                    """
                     # structure A/B/C
                     print('training:', epoch + 1, 'batch', n, 'rec_loss:', rec_loss.item(), 'cl_loss:', cl_loss.item())
                     """
                     # structure D
                     print('training:', epoch + 1, 'batch', n, 'rec_loss:', rec_loss.item(), 'ssl_loss:', ssl_loss.item(),
                           'cl_loss:', cl_loss.item(), 'gl_loss:', gl_loss.item())
-                    """
             with torch.no_grad():
                 self.user_emb, self.item_emb = self.model()
             self.fast_evaluation(epoch)
