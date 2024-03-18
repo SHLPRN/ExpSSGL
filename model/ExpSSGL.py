@@ -127,9 +127,9 @@ class ExpSSGL(GraphRecommender):
         u_idx = torch.unique(torch.Tensor(idx[0]).type(torch.long)).cuda()
         i_idx = torch.unique(torch.Tensor(idx[1]).type(torch.long)).cuda()
         user_view_2, item_view_2 = self.model(perturbed_adj=perturbed_mat)
-        user_cl_loss = InfoNCE(user_view_1[u_idx], user_view_2[u_idx], self.temp)
-        item_cl_loss = InfoNCE(item_view_1[i_idx], item_view_2[i_idx], self.temp)
-        return user_cl_loss + item_cl_loss
+        view1 = torch.cat((user_view_1[u_idx], item_view_1[i_idx]), 0)
+        view2 = torch.cat((user_view_2[u_idx], item_view_2[i_idx]), 0)
+        return InfoNCE(view1, view2, self.temp)
 
     """
     def cal_cl_loss2(self, idx):
