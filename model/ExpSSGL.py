@@ -66,14 +66,19 @@ class ExpSSGL(GraphRecommender):
                            self.cl_rate2 * self.cal_cl_loss2([user_idx, pos_idx], rec_user_emb, rec_item_emb,
                                                              dropped_adj))
                 # structure B
-                cl_loss = self.cl_rate * self.cal_cl_loss([user_idx, pos_idx], dropped_adj)
+                cl_loss = self.cl_rate * self.cal_cl_loss3([user_idx, pos_idx], dropped_adj)
                 # structure C
                 cl_loss = (self.cl_rate1 * self.cal_cl_loss1([user_idx, pos_idx]) +
-                           self.cl_rate2 * self.cal_cl_loss2([user_idx, pos_idx]))
+                           self.cl_rate2 * self.cal_cl_loss4([user_idx, pos_idx]))
                 """
                 # structure D
                 cl_loss = self.cl_rate * self.cal_cl_loss1([user_idx, pos_idx])
-                gl_loss = self.gl_rate * self.cal_gl_loss(dropped_adj, drop_user_idx, drop_pos_idx, drop_neg_idx)
+                """
+                # structure D_1
+                gl_loss = self.gl_rate * self.cal_gl_loss1(dropped_adj, drop_user_idx, drop_pos_idx, drop_neg_idx)
+                """
+                # structure D_2
+                gl_loss = self.gl_rate * self.cal_gl_loss2(dropped_adj, drop_user_idx, drop_pos_idx, drop_neg_idx)
                 ssl_loss = cl_loss + gl_loss
                 """
                 # structure A/B/C
@@ -135,16 +140,8 @@ class ExpSSGL(GraphRecommender):
         else:
             return TorchGraphInterface.convert_sparse_mat_to_tensor(dropped_mat).cuda()
 
-    def cal_cl_loss(self, idx, perturbed_mat):
-        u_idx = torch.unique(torch.Tensor(idx[0]).type(torch.long)).cuda()
-        i_idx = torch.unique(torch.Tensor(idx[1]).type(torch.long)).cuda()
-        user_view_1, item_view_1 = self.model(perturbed=True)
-        user_view_2, item_view_2 = self.model(perturbed_adj=perturbed_mat)
-        user_cl_loss = InfoNCE(user_view_1[u_idx], user_view_2[u_idx], self.temp)
-        item_cl_loss = InfoNCE(item_view_1[i_idx], item_view_2[i_idx], self.temp)
-        return user_cl_loss + item_cl_loss
-
     def cal_cl_loss1(self, idx):
+        """CL: noise & noise"""
         u_idx = torch.unique(torch.Tensor(idx[0]).type(torch.long)).cuda()
         i_idx = torch.unique(torch.Tensor(idx[1]).type(torch.long)).cuda()
         user_view_1, item_view_1 = self.model(perturbed=True)
@@ -153,16 +150,28 @@ class ExpSSGL(GraphRecommender):
         item_cl_loss = InfoNCE(item_view_1[i_idx], item_view_2[i_idx], self.temp)
         return user_cl_loss + item_cl_loss
 
-    def cal_cl_loss2(self, idx, user_view_1, item_view_1, perturbed_mat):
+    def cal_cl_loss2(self, idx, user_view_2, item_view_2, perturbed_mat):
+        """CL: dropout & main"""
         u_idx = torch.unique(torch.Tensor(idx[0]).type(torch.long)).cuda()
         i_idx = torch.unique(torch.Tensor(idx[1]).type(torch.long)).cuda()
-        user_view_2, item_view_2 = self.model(perturbed_adj=perturbed_mat)
+        user_view_1, item_view_1 = self.model(perturbed_adj=perturbed_mat)
         view1 = torch.cat((user_view_1[u_idx], item_view_1[i_idx]), 0)
         view2 = torch.cat((user_view_2[u_idx], item_view_2[i_idx]), 0)
         return InfoNCE(view1, view2, self.temp)
 
+    def cal_cl_loss3(self, idx, perturbed_mat):
+        """CL: dropout & noise"""
+        u_idx = torch.unique(torch.Tensor(idx[0]).type(torch.long)).cuda()
+        i_idx = torch.unique(torch.Tensor(idx[1]).type(torch.long)).cuda()
+        user_view_1, item_view_1 = self.model(perturbed_adj=perturbed_mat)
+        user_view_2, item_view_2 = self.model(perturbed=True)
+        user_cl_loss = InfoNCE(user_view_1[u_idx], user_view_2[u_idx], self.temp)
+        item_cl_loss = InfoNCE(item_view_1[i_idx], item_view_2[i_idx], self.temp)
+        return user_cl_loss + item_cl_loss
+
     """
-    def cal_cl_loss2(self, idx):
+    def cal_cl_loss4(self, idx):
+        # CL: dropout & dropout
         perturbed_mat1 = self.graph_edge_dropout()
         perturbed_mat2 = self.graph_edge_dropout()
         u_idx = torch.unique(torch.Tensor(idx[0]).type(torch.long)).cuda()
@@ -174,7 +183,15 @@ class ExpSSGL(GraphRecommender):
         return user_cl_loss + item_cl_loss
     """
 
-    def cal_gl_loss(self, perturbed_mat, drop_user_idx, drop_pos_idx, drop_neg_idx):
+    def cal_gl_loss1(self, perturbed_mat, drop_user_idx, drop_pos_idx, drop_neg_idx):
+        """GL: base on the raw embeddings"""
+        perturbed_user_emb, perturbed_item_emb = self.model(perturbed_adj=perturbed_mat)
+        user_emb, pos_item_emb, neg_item_emb = (perturbed_user_emb[drop_user_idx], perturbed_item_emb[drop_pos_idx],
+                                                perturbed_item_emb[drop_neg_idx])
+        return bpr_loss(user_emb, pos_item_emb, neg_item_emb)
+
+    def cal_gl_loss2(self, perturbed_mat, drop_user_idx, drop_pos_idx, drop_neg_idx):
+        """GL: base on the embeddings after GCN process"""
         perturbed_user_emb, perturbed_item_emb = self.model(perturbed_adj=perturbed_mat)
         user_emb, pos_item_emb, neg_item_emb = (perturbed_user_emb[drop_user_idx], perturbed_item_emb[drop_pos_idx],
                                                 perturbed_item_emb[drop_neg_idx])
