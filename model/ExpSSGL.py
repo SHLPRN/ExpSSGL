@@ -73,13 +73,13 @@ class ExpSSGL(GraphRecommender):
                 """
                 # structure D
                 cl_loss = self.cl_rate * self.cal_cl_loss1([user_idx, pos_idx])
-                """
                 # structure D_1
                 gl_loss = self.gl_rate * self.cal_gl_loss1(dropped_adj, drop_user_idx, drop_pos_idx, drop_neg_idx)
                 """
                 # structure D_2
                 gl_loss = self.gl_rate * self.cal_gl_loss2(rec_user_emb, rec_item_emb, dropped_adj, drop_user_idx,
                                                            drop_pos_idx, drop_neg_idx)
+                """
                 ssl_loss = cl_loss + gl_loss
                 """
                 # structure A/B/C
@@ -170,7 +170,6 @@ class ExpSSGL(GraphRecommender):
         item_cl_loss = InfoNCE(item_view_1[i_idx], item_view_2[i_idx], self.temp)
         return user_cl_loss + item_cl_loss
 
-    """
     def cal_cl_loss4(self, idx):
         # CL: dropout & dropout
         perturbed_mat1 = self.graph_edge_dropout()
@@ -182,7 +181,6 @@ class ExpSSGL(GraphRecommender):
         user_cl_loss = InfoNCE(user_view_1[u_idx], user_view_2[u_idx], self.temp)
         item_cl_loss = InfoNCE(item_view_1[i_idx], item_view_2[i_idx], self.temp)
         return user_cl_loss + item_cl_loss
-    """
 
     def cal_gl_loss1(self, perturbed_mat, drop_user_idx, drop_pos_idx, drop_neg_idx):
         """GL: base on the raw embeddings"""
