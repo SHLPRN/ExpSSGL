@@ -78,7 +78,8 @@ class ExpSSGL(GraphRecommender):
                 gl_loss = self.gl_rate * self.cal_gl_loss1(dropped_adj, drop_user_idx, drop_pos_idx, drop_neg_idx)
                 """
                 # structure D_2
-                gl_loss = self.gl_rate * self.cal_gl_loss2(dropped_adj, drop_user_idx, drop_pos_idx, drop_neg_idx)
+                gl_loss = self.gl_rate * self.cal_gl_loss2(rec_user_emb, rec_item_emb, dropped_adj, drop_user_idx,
+                                                           drop_pos_idx, drop_neg_idx)
                 ssl_loss = cl_loss + gl_loss
                 """
                 # structure A/B/C
@@ -190,9 +191,10 @@ class ExpSSGL(GraphRecommender):
                                                 perturbed_item_emb[drop_neg_idx])
         return bpr_loss(user_emb, pos_item_emb, neg_item_emb)
 
-    def cal_gl_loss2(self, perturbed_mat, drop_user_idx, drop_pos_idx, drop_neg_idx):
+    def cal_gl_loss2(self, rec_user_emb, rec_item_emb, perturbed_mat, drop_user_idx, drop_pos_idx, drop_neg_idx):
         """GL: base on the embeddings after GCN process"""
-        perturbed_user_emb, perturbed_item_emb = self.model(perturbed_adj=perturbed_mat)
+        perturbed_user_emb, perturbed_item_emb = self.model(rec_user_emb=rec_user_emb, rec_item_emb=rec_item_emb,
+                                                            perturbed_adj=perturbed_mat)
         user_emb, pos_item_emb, neg_item_emb = (perturbed_user_emb[drop_user_idx], perturbed_item_emb[drop_pos_idx],
                                                 perturbed_item_emb[drop_neg_idx])
         return bpr_loss(user_emb, pos_item_emb, neg_item_emb)
@@ -226,8 +228,11 @@ class ExpSSGL_Encoder(nn.Module):
         })
         return embedding_dict
 
-    def forward(self, perturbed_adj=None, perturbed=False):
-        ego_embeddings = torch.cat([self.embedding_dict['user_emb'], self.embedding_dict['item_emb']], 0)
+    def forward(self, rec_user_emb=None, rec_item_emb=None, perturbed_adj=None, perturbed=False):
+        if rec_user_emb is None:
+            ego_embeddings = torch.cat([self.embedding_dict['user_emb'], self.embedding_dict['item_emb']], 0)
+        else:
+            ego_embeddings = torch.cat([rec_user_emb, rec_item_emb], 0)
         all_embeddings = []
         for k in range(self.n_layers):
             if perturbed_adj is not None:
