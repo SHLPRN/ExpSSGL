@@ -23,7 +23,7 @@ class ExpSSGL(GraphRecommender):
         # structure B
         self.cl_rate = float(args['-lambda'])
         """
-        # structure D
+        # structure D/E
         self.cl_rate = float(args['-lambda1'])
         self.gl_rate = float(args['-lambda2'])
         self.drop_rate = float(args['-droprate'])
@@ -44,7 +44,7 @@ class ExpSSGL(GraphRecommender):
             # structure A/B/C
             dropped_adj = self.graph_edge_dropout()
             """
-            # structure D
+            # structure D/E
             dropped_adj, dropped_interaction_mat = self.graph_edge_dropout(need=True)
             """
             for n, batch in enumerate(next_batch_pairwise(self.data, self.batch_size)):
@@ -54,7 +54,7 @@ class ExpSSGL(GraphRecommender):
                 # structure A/B/C
                 user_idx, pos_idx, neg_idx = batch
                 """
-                # structure D
+                # structure D/E
                 user_idx, pos_idx, neg_idx, drop_user_idx, drop_pos_idx, drop_neg_idx = batch
                 rec_user_emb, rec_item_emb = model()
                 user_emb, pos_item_emb, neg_item_emb = (rec_user_emb[user_idx], rec_item_emb[pos_idx],
@@ -70,22 +70,23 @@ class ExpSSGL(GraphRecommender):
                 # structure C
                 cl_loss = (self.cl_rate1 * self.cal_cl_loss1([user_idx, pos_idx]) +
                            self.cl_rate2 * self.cal_cl_loss4([user_idx, pos_idx]))
-                """
                 # structure D
                 cl_loss = self.cl_rate * self.cal_cl_loss1([user_idx, pos_idx])
                 # structure D_1
                 gl_loss = self.gl_rate * self.cal_gl_loss1(dropped_adj, drop_user_idx, drop_pos_idx, drop_neg_idx)
-                """
                 # structure D_2
                 gl_loss = self.gl_rate * self.cal_gl_loss2(rec_user_emb, rec_item_emb, dropped_adj, drop_user_idx,
                                                            drop_pos_idx, drop_neg_idx)
+                ssl_loss = cl_loss + gl_loss
                 """
+                # structure E
+                cl_loss, gl_loss = self.cal_ssl_loss(dropped_adj, drop_user_idx, drop_pos_idx, drop_neg_idx)
                 ssl_loss = cl_loss + gl_loss
                 """
                 # structure A/B/C
                 batch_loss = rec_loss + cl_loss + l2_reg_loss(self.reg, user_emb, pos_item_emb)
                 """
-                # structure D
+                # structure D/E
                 batch_loss = rec_loss + ssl_loss + l2_reg_loss(self.reg, user_emb, pos_item_emb)
                 # Backward and optimize
                 optimizer.zero_grad()
@@ -96,7 +97,7 @@ class ExpSSGL(GraphRecommender):
                     # structure A/B/C
                     print('training:', epoch + 1, 'batch', n, 'rec_loss:', rec_loss.item(), 'cl_loss:', cl_loss.item())
                     """
-                    # structure D
+                    # structure D/E
                     print('training:', epoch + 1, 'batch', n, 'rec_loss:', rec_loss.item(), 'ssl_loss:', ssl_loss.item())
             with torch.no_grad():
                 self.user_emb, self.item_emb = self.model()
@@ -196,6 +197,20 @@ class ExpSSGL(GraphRecommender):
         user_emb, pos_item_emb, neg_item_emb = (perturbed_user_emb[drop_user_idx], perturbed_item_emb[drop_pos_idx],
                                                 perturbed_item_emb[drop_neg_idx])
         return bpr_loss(user_emb, pos_item_emb, neg_item_emb)
+
+    def cal_ssl_loss(self, perturbed_mat, drop_user_idx, drop_pos_idx, drop_neg_idx):
+        """SSL: CL-dropout&noise + GL-base on the raw embeddings"""
+        perturbed_user_emb, perturbed_item_emb = self.model(perturbed_adj=perturbed_mat)
+        user_emb, pos_item_emb, neg_item_emb = (perturbed_user_emb[drop_user_idx], perturbed_item_emb[drop_pos_idx],
+                                                perturbed_item_emb[drop_neg_idx])
+        gl_loss = bpr_loss(user_emb, pos_item_emb, neg_item_emb)
+        u_idx = torch.unique(torch.Tensor(idx[0]).type(torch.long)).cuda()
+        i_idx = torch.unique(torch.Tensor(idx[1]).type(torch.long)).cuda()
+        user_view_2, item_view_2 = self.model(perturbed=True)
+        user_cl_loss = InfoNCE(perturbed_user_emb[u_idx], user_view_2[u_idx], self.temp)
+        item_cl_loss = InfoNCE(perturbed_item_emb[i_idx], item_view_2[i_idx], self.temp)
+        cl_loss = user_cl_loss + item_cl_loss
+        return cl_loss, gl_loss
 
     def save(self):
         with torch.no_grad():
