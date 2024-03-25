@@ -80,7 +80,8 @@ class ExpSSGL(GraphRecommender):
                 ssl_loss = cl_loss + gl_loss
                 """
                 # structure E
-                cl_loss, gl_loss = self.cal_ssl_loss(dropped_adj, drop_user_idx, drop_pos_idx, drop_neg_idx)
+                cl_loss, gl_loss = self.cal_ssl_loss([user_idx, pos_idx], dropped_adj, drop_user_idx, drop_pos_idx,
+                                                     drop_neg_idx)
                 ssl_loss = cl_loss + gl_loss
                 """
                 # structure A/B/C
@@ -198,7 +199,7 @@ class ExpSSGL(GraphRecommender):
                                                 perturbed_item_emb[drop_neg_idx])
         return bpr_loss(user_emb, pos_item_emb, neg_item_emb)
 
-    def cal_ssl_loss(self, perturbed_mat, drop_user_idx, drop_pos_idx, drop_neg_idx):
+    def cal_ssl_loss(self, idx, perturbed_mat, drop_user_idx, drop_pos_idx, drop_neg_idx):
         """SSL: CL-dropout&noise + GL-base on the raw embeddings"""
         perturbed_user_emb, perturbed_item_emb = self.model(perturbed_adj=perturbed_mat)
         user_emb, pos_item_emb, neg_item_emb = (perturbed_user_emb[drop_user_idx], perturbed_item_emb[drop_pos_idx],
