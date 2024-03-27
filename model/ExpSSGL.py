@@ -73,13 +73,17 @@ class ExpSSGL(GraphRecommender):
                 """
                 # structure D
                 cl_loss = self.cl_rate * self.cal_cl_loss1([user_idx, pos_idx])
+                """
                 # structure D_1
                 gl_loss = self.gl_rate * self.cal_gl_loss1(dropped_adj, drop_user_idx, drop_pos_idx, drop_neg_idx)
-                """
                 # structure D_2
                 gl_loss = self.gl_rate * self.cal_gl_loss2(rec_user_emb, rec_item_emb, dropped_adj, drop_user_idx,
                                                            drop_pos_idx, drop_neg_idx)
+                """
+                # structure D_3
+                gl_loss = self.gl_rate * self.cal_gl_loss3(dropped_adj, drop_user_idx, drop_pos_idx)
                 ssl_loss = cl_loss + gl_loss
+                """
                 # structure E
                 cl_loss, gl_loss = self.cal_ssl_loss([user_idx, pos_idx], dropped_adj, drop_user_idx, drop_pos_idx,
                                                      drop_neg_idx)
