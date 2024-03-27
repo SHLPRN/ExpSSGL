@@ -70,20 +70,20 @@ class ExpSSGL(GraphRecommender):
                 # structure C
                 cl_loss = (self.cl_rate1 * self.cal_cl_loss1([user_idx, pos_idx]) +
                            self.cl_rate2 * self.cal_cl_loss4([user_idx, pos_idx]))
+                """
                 # structure D
                 cl_loss = self.cl_rate * self.cal_cl_loss1([user_idx, pos_idx])
                 # structure D_1
                 gl_loss = self.gl_rate * self.cal_gl_loss1(dropped_adj, drop_user_idx, drop_pos_idx, drop_neg_idx)
+                """
                 # structure D_2
                 gl_loss = self.gl_rate * self.cal_gl_loss2(rec_user_emb, rec_item_emb, dropped_adj, drop_user_idx,
                                                            drop_pos_idx, drop_neg_idx)
                 ssl_loss = cl_loss + gl_loss
-                """
                 # structure E
                 cl_loss, gl_loss = self.cal_ssl_loss([user_idx, pos_idx], dropped_adj, drop_user_idx, drop_pos_idx,
                                                      drop_neg_idx)
                 ssl_loss = cl_loss + gl_loss
-                """
                 # structure A/B/C
                 batch_loss = rec_loss + cl_loss + l2_reg_loss(self.reg, user_emb, pos_item_emb)
                 """
@@ -198,6 +198,13 @@ class ExpSSGL(GraphRecommender):
         user_emb, pos_item_emb, neg_item_emb = (perturbed_user_emb[drop_user_idx], perturbed_item_emb[drop_pos_idx],
                                                 perturbed_item_emb[drop_neg_idx])
         return bpr_loss(user_emb, pos_item_emb, neg_item_emb)
+
+    def cal_gl_loss3(self, perturbed_mat, drop_user_idx, drop_pos_idx):
+        """GL: base on the raw embeddings, using cross-entropy loss"""
+        perturbed_user_emb, perturbed_item_emb = self.model(perturbed_adj=perturbed_mat)
+        user_emb, pos_item_emb = (perturbed_user_emb[drop_user_idx], perturbed_item_emb[drop_pos_idx])
+        gl_loss = -torch.log(torch.sigmoid(torch.mul(user_emb, pos_item_emb).sum(dim=1)))
+        return gl_loss.mean
 
     def cal_ssl_loss(self, idx, perturbed_mat, drop_user_idx, drop_pos_idx, drop_neg_idx):
         """SSL: CL-dropout&noise + GL-base on the raw embeddings"""
