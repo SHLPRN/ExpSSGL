@@ -207,8 +207,7 @@ class ExpSSGL(GraphRecommender):
         """GL: base on the raw embeddings, using cross-entropy loss"""
         perturbed_user_emb, perturbed_item_emb = self.model(perturbed_adj=perturbed_mat)
         user_emb, pos_item_emb = (perturbed_user_emb[drop_user_idx], perturbed_item_emb[drop_pos_idx])
-        # gl_loss = -torch.log(torch.sigmoid(torch.mul(user_emb, pos_item_emb).sum(dim=1)))
-        gl_loss = -torch.log(torch.nn.functional.softmax(torch.mul(user_emb, pos_item_emb).sum(dim=1)))
+        gl_loss = -torch.log(torch.sigmoid(torch.mul(user_emb, pos_item_emb).sum(dim=1)))
         return torch.mean(gl_loss)
 
     def cal_ssl_loss(self, idx, perturbed_mat, drop_user_idx, drop_pos_idx, drop_neg_idx):
