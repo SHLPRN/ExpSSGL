@@ -79,9 +79,12 @@ class ExpSSGL(GraphRecommender):
                 # structure D_2
                 gl_loss = self.gl_rate * self.cal_gl_loss2(rec_user_emb, rec_item_emb, dropped_adj, drop_user_idx,
                                                            drop_pos_idx, drop_neg_idx)
-                """
                 # structure D_3
                 gl_loss = self.gl_rate * self.cal_gl_loss3(dropped_adj, drop_user_idx, drop_pos_idx)
+                """
+                # structure D_4
+                gl_loss = self.gl_rate * self.cal_gl_loss4(rec_user_emb, rec_item_emb, dropped_adj, drop_user_idx,
+                                                           drop_pos_idx, drop_neg_idx)
                 ssl_loss = cl_loss + gl_loss
                 """
                 # structure E
@@ -209,6 +212,20 @@ class ExpSSGL(GraphRecommender):
         user_emb, pos_item_emb = (perturbed_user_emb[drop_user_idx], perturbed_item_emb[drop_pos_idx])
         gl_loss = -torch.log(torch.sigmoid(torch.mul(user_emb, pos_item_emb).sum(dim=1)))
         return torch.mean(gl_loss)
+
+    def cal_gl_loss4(self, rec_user_emb, rec_item_emb, perturbed_mat, drop_user_idx, drop_pos_idx, drop_neg_idx):
+        """GL: base on the raw embeddings, using MSE loss"""
+        perturbed_user_emb, perturbed_item_emb = self.model(perturbed_adj=perturbed_mat)
+        user_emb1, pos_item_emb1, neg_item_emb1 = (rec_user_emb[drop_user_idx], rec_item_emb[drop_pos_idx],
+                                                rec_item_emb[drop_neg_idx])
+        user_emb2, pos_item_emb2, neg_item_emb2 = (perturbed_user_emb[drop_user_idx], perturbed_item_emb[drop_pos_idx],
+                                                perturbed_item_emb[drop_neg_idx])
+        pos_score1 = torch.mul(user_emb1, pos_item_emb1).sum(dim=1)
+        neg_score1 = torch.mul(user_emb1, neg_item_emb1).sum(dim=1)
+        pos_score2 = torch.mul(user_emb2, pos_item_emb2).sum(dim=1)
+        neg_score2 = torch.mul(user_emb2, neg_item_emb2).sum(dim=1)
+        mse_mean = nn.MSELoss(reduction='mean')
+        return mse_mean(pos_score1 / neg_score1, pos_score2 / neg_score2)
 
     def cal_ssl_loss(self, idx, perturbed_mat, drop_user_idx, drop_pos_idx, drop_neg_idx):
         """SSL: CL-dropout&noise + GL-base on the raw embeddings"""
