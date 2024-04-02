@@ -225,8 +225,8 @@ class ExpSSGL(GraphRecommender):
         pos_score2 = torch.mul(user_emb2, pos_item_emb2).sum(dim=1)
         neg_score2 = torch.mul(user_emb2, neg_item_emb2).sum(dim=1)
         loss_cal = nn.SmoothL1Loss(reduction='sum')
-        loss = loss_cal(torch.log(10e-6 + torch.sigmoid(pos_score1 - neg_score1)),
-                        torch.log(10e-6 + torch.sigmoid(pos_score2 - neg_score2)))
+        loss = loss_cal(pos_score1 - neg_score1, pos_score2 - neg_score2)
+        loss = torch.log(1 + 10e-6 + torch.sigmoid(loss))
         return loss
 
     def cal_ssl_loss(self, idx, perturbed_mat, drop_user_idx, drop_pos_idx, drop_neg_idx):
