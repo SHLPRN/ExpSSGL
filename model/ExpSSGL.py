@@ -224,8 +224,8 @@ class ExpSSGL(GraphRecommender):
         neg_score1 = torch.mul(user_emb1, neg_item_emb1).sum(dim=1)
         pos_score2 = torch.mul(user_emb2, pos_item_emb2).sum(dim=1)
         neg_score2 = torch.mul(user_emb2, neg_item_emb2).sum(dim=1)
-        mse_mean = nn.MSELoss(reduction='mean')
-        return mse_mean(pos_score1 / neg_score1, pos_score2 / neg_score2)
+        loss = nn.SmoothL1Loss(reduction='mean')
+        return loss(pos_score1 / neg_score1, pos_score2 / neg_score2)
 
     def cal_ssl_loss(self, idx, perturbed_mat, drop_user_idx, drop_pos_idx, drop_neg_idx):
         """SSL: CL-dropout&noise + GL-base on the raw embeddings"""
